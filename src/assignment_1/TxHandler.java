@@ -2,6 +2,7 @@ package assignment_1;
 
 public class TxHandler {
 
+	UTXOPool utxoPool;
     /**
      * Creates a public ledger whose current UTXOPool (collection of unspent transaction outputs) is
      * {@code utxoPool}. This should make a copy of utxoPool by using the UTXOPool(UTXOPool uPool)
@@ -9,6 +10,7 @@ public class TxHandler {
      */
     public TxHandler(UTXOPool utxoPool) {
         // IMPLEMENT THIS
+    	this.utxoPool= new UTXOPool(utxoPool);
     }
 
     /**
@@ -31,6 +33,18 @@ public class TxHandler {
      */
     public Transaction[] handleTxs(Transaction[] possibleTxs) {
         // IMPLEMENT THIS
+    	Transaction[] acceptedTxs;
+    	int numAcceptedTxs=0;
+    	for (Transaction transaction:possibleTxs){
+    		//if valid - add to the result array
+    		
+    		//if valid - update the utxo
+    		
+    		//if valid - increment numAcceptedTxs
+    	}
+    	// Initialize acceptedTxs array with numAcceptedTxs
+    	acceptedTxs=new Transaction[numAcceptedTxs];
+    	return acceptedTxs;
     }
 
 }
