@@ -94,9 +94,9 @@ public class Transaction {
 	// To verify a signature, use the verifySignature() method
 	// verifySignature(PublicKey pubKey, byte[] message, byte[] signature)
 	public byte[] getRawDataToSign(int index) {					// Index of input to be signed
-		// ith input and all outputs
+		// with input and all outputs
 		ArrayList<Byte> sigData = new ArrayList<Byte>();		// This will be the message to be signed
-		
+
 		// Convert the outputIndex and prevTXHash to bytes and add to the message to be signed
 		if (index > inputs.size())								// Is input in the inputs array of current tx?
 			return null;										// return null, nothing to sign
@@ -113,10 +113,10 @@ public class Transaction {
 		for (int i = 0; i < outputIndex.length; i++) {			// Add every byte of outputIndex to message
 			sigData.add(outputIndex[i]);
 		}
-		
+
 		// Add EVERY output from the outputs ArrayList to the message that is to be signed...
 		for (Output op : outputs) {								// Walk through all outputs in the current tx
-			ByteBuffer bo = ByteBuffer.allocate(Double.SIZE / 8);	//Create bb to convert double value to bytes
+			ByteBuffer bo = ByteBuffer.allocate(Double.SIZE / 8);	// Create bb to convert double value to bytes
 			bo.putDouble(op.value);								// Add the output's value to the bb
 			byte[] value = bo.array();							// Add content of bb to a byte[] array
 			byte[] addressBytes = op.address.getEncoded();		// Add the output's PK to a byte[] array
@@ -125,7 +125,7 @@ public class Transaction {
 
 			for (int i = 0; i < addressBytes.length; i++)
 				sigData.add(addressBytes[i]);					// Append the value of address to message
-		} //end for
+		} // end for
 		byte[] sigD = new byte[sigData.size()];					// create a byte[] array from message arraylist
 		int i = 0;
 		for (Byte sb : sigData)									// go through every byte of message
@@ -137,7 +137,12 @@ public class Transaction {
 		inputs.get(index).addSignature(signature);
 	}
 
-	public byte[] getRawTx() {
+	/* Creates a byte[] array with the content of
+	 * All inputs with outputIndex, signature, prevTXhas
+	 * All outputs with value, address
+	 * 
+	 */
+	public byte[] getRawTx() {											// Get ALL inputs & Outputs in a byte[] array
 		ArrayList<Byte> rawTx = new ArrayList<Byte>();
 		for (Input in : inputs) {
 			byte[] prevTxHash = in.prevTxHash;
@@ -174,7 +179,7 @@ public class Transaction {
 		return tx;
 	}
 
-	public void finalize() {
+	public void finalize() {													// Creates a hash of the full Transaction (all inputs & outputs)
 		try {
 			MessageDigest md = MessageDigest.getInstance("SHA-256");
 			md.update(getRawTx());
