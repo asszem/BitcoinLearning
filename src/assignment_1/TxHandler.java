@@ -21,14 +21,83 @@ public class TxHandler {
 	 *         otherwise.
 	 */
 	public boolean isValidTx(Transaction tx) {
+		int totalInputValue = 0;
+		int totalOutputValue = 0;
+		boolean isUTXOinUTXOPool;
+		ArrayList<UTXO> allUTXOs = utxoPool.getAllUTXO(); 									// Get all the UTXOs from current utxoPool
+		ArrayList<UTXO> claimedUTXOs = new ArrayList<>();									// List with all UTXO's that have been validated
+		UTXO currentUTXO;																	// The UTXO that is claimed by a Transaction.Input
+
 		// (1) all outputs claimed by {@code tx} are in the current UTXO pool
-		if (!isAllClaimedOutputsInUTXOPool(tx))
-			return false;
 
-		// This can be reached only if all output is valid
+		// Check if every Input (outputs claimed by the transaction) in the transaction are referencing outputs that are in UTXO pool
+		for (Transaction.Input underReviewInput : tx.getInputs()) {
 
-		// (2) the signatures on each input of {@code tx} are valid,
-		if (!isAllSignaturesOnEachInputValid(tx))
+			// Needs to be changed ONLY if tx found in UTXO pool
+			isUTXOinUTXOPool = false;
+
+			// Check if the output referenced by the current underReviewInput is in the UTXOPool
+			for (UTXO utxoUnderReview : allUTXOs) {
+
+				// Check if the UTXO under review references the same transaction hash as the Transaction.Input under review
+				// TODO verify if this is valid, or equals() need to be used
+				boolean isHashSame = utxoUnderReview.getTxHash() == underReviewInput.prevTxHash;	// If the UTXO references the same hash as the reviewed input
+
+				// If not, then UTXO is different continue with next UTXO for-each cylce
+				if (!isHashSame) {
+					continue;
+				}
+
+				// Check if the UTXO under review has the same output index as the Transaction.Input under review
+				boolean isOutputIndexSame = utxoUnderReview.getIndex() == underReviewInput.outputIndex;
+
+				if (isOutputIndexSame) {
+					// At this point we found the UTXO that was referenced by the underReviewInput
+
+					// Set the boolean to true so that execution can continue outside the UTXO for-each block
+					isUTXOinUTXOPool = true;
+
+					// set the currentUTXO to reference the found UTXO object
+					currentUTXO = utxoUnderReview;
+
+					// check that (3) no UTXO is claimed multiple times by {@code tx}
+					for (UTXO claimedUTXO : claimedUTXOs) {
+
+						// if the currentUTXO is already in the claimedUTXO list then this is a doubleSpend then the isValidTx must return false
+						if (claimedUTXO.equals(currentUTXO))
+							return false;
+					}
+
+					// This can be reached only if UTXO was not found in the lsit of claimedUTXOs, so we add it to the list
+					claimedUTXOs.add(currentUTXO);
+
+					// (2) the signatures on each input of {@code tx} are valid,
+
+					// Add the value of UTXO's Output to the total value of inputs. This can be done only if everything else is fine with the input
+					totalInputValue += utxoPool.getTxOutput(currentUTXO).value;
+					break;																	// Break from the UTXO for-each cycle
+				} // end if
+			} // end UTXO for-each cycle
+
+			// This is reached when all UTXO's have been checked. If currentTxOutput was not found then isValidTX returns false
+			if (!isUTXOinUTXOPool) {
+				return false;																// If an output is NOT in the pool, tx is NOT valid
+			}
+
+			// This can be reached only if UTXO is in the UTXOPool and signature is valid
+			isUTXOinUTXOPool = false;														// Set the verification boolean to false
+			// continue with the review of next input
+		} // end underReviewInput cycle
+
+		// (4) all of {@code tx}s output values are non-negative,
+		for (Transaction.Output output : tx.getOutputs()) {
+			if (output.value < 0) {
+				return false;
+			}
+		}
+
+		// (5) the sum of {@code tx}s input values is greater than or equal to the sum of its output values;
+		if (totalInputValue < totalOutputValue)
 			return false;
 
 		// Only get here if everything passed
@@ -76,16 +145,9 @@ public class TxHandler {
 	 * Return true if the signatures on each input of {@code tx} are valid
 	 */
 	public boolean isAllSignaturesOnEachInputValid(Transaction tx) {
-
 		int inputIndex = 0;
-		for (Transaction.Input input : tx.getInputs()) {
-			// Return false if any of the input fails
-			int outputIndex = input.outputIndex;
-			byte[] prevTXHash = input.prevTxHash;
-			byte[] signature = input.signature;
+		for (Transaction.Input input : tx.getInputs()) {						// Walk through all inputs in argument tx
 
-			// TODO find out how to get the PublicKey for verification
-			// I can't reference the previous TX OutPut inner class to get the PK stored in it...
 			if (!Crypto.verifySignature(tx.getOutput(inputIndex).address, tx.getRawDataToSign(inputIndex),
 					input.signature)) {
 				return false;
@@ -93,7 +155,21 @@ public class TxHandler {
 			inputIndex++;
 		}
 
+		// This can be reached only if all signatures are valid
 		return true;
+	}
+
+	public int sumOfInputValues(Transaction tx){
+		int sum=0;
+		int currentInputValue=0;
+		for (Transaction.Input input : tx.getInputs()){
+			input.outputIndex;
+		}
+		
+		
+		
+		
+		return sum;
 	}
 
 	/**
