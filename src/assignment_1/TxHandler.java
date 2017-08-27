@@ -7,7 +7,6 @@ import java.util.Arrays;
 public class TxHandler {
 
 	UTXOPool utxoPool;														// create a copy of current utxoPool that is to be updated
-	ArrayList<UTXO> allUTXOs = utxoPool.getAllUTXO(); 						// Get all the UTXOs from current utxoPool
 	ArrayList<UTXO> claimedUTXOs;										    // List with all UTXO's that have been validated
 
 	/**
@@ -30,9 +29,10 @@ public class TxHandler {
 		int indexOfInputUnderReview = 0;
 		boolean isUTXOinUTXOPool;
 		UTXO currentUTXO;																	// The UTXO that is claimed by a Transaction.Input
+		ArrayList<UTXO> allUTXOs = utxoPool.getAllUTXO(); 						// Get all the UTXOs from current utxoPool
 
-		//the claimedUTXO list needs to be reinstantiated with every call of isValidTX method. This list will be used in handleTX method
-		claimedUTXOs=new ArrayList<>();	
+		// the claimedUTXO list needs to be reinstantiated with every call of isValidTX method. This list will be used in handleTX method
+		claimedUTXOs = new ArrayList<>();
 
 		// (1) all outputs claimed by {@code tx} are in the current UTXO pool
 
@@ -47,7 +47,11 @@ public class TxHandler {
 
 				// Check if the UTXO under review references the same transaction hash as the Transaction.Input under review
 				// TODO verify if this is valid, or equals() need to be used
-				boolean isHashSame = utxoUnderReview.getTxHash() == underReviewInput.prevTxHash;	// If the UTXO references the same hash as the reviewed input
+				
+				byte[] utxoHash=utxoUnderReview.getTxHash();
+				byte[] inputReferencedHash=underReviewInput.prevTxHash;
+				boolean isHashSame=Arrays.equals(utxoHash, inputReferencedHash);
+				
 
 				// If not, then UTXO is different continue with next UTXO for-each cylce
 				if (!isHashSame) {
@@ -73,8 +77,9 @@ public class TxHandler {
 					for (UTXO claimedUTXO : claimedUTXOs) {
 
 						// if the currentUTXO is already in the claimedUTXO list then this is a doubleSpend then the isValidTx must return false
-						if (claimedUTXO.equals(currentUTXO))
+						if (claimedUTXO.equals(currentUTXO)) {
 							return false;
+						}
 					}
 
 					// METHOD FAILING VALIDATION
@@ -139,21 +144,22 @@ public class TxHandler {
 
 		for (Transaction transactionUnderReview : possibleTxs) {
 
-			// if valid - add to the result arrayList
+			// check if tx is valid
 			if (isValidTx(transactionUnderReview)) {
+				// if TX was valid, then add tx to the acceptedTransactions arraylist
 				acceptedTransactions.add(transactionUnderReview);
 
 				// if TX was valid, then update the UTXOPool by removing all claimedUTXOs
-				for (UTXO utxoToRemove:claimedUTXOs){
+				for (UTXO utxoToRemove : claimedUTXOs) {
 					utxoPool.removeUTXO(utxoToRemove);
-				} //end UTXO removal from pool
+				} // end UTXO removal from pool
 			}// end isValid(tx)
-		} //end transactionUnderReview for-each cycle
+		} // end transactionUnderReview for-each cycle
 
 		// Initialize acceptedTxs array with numAcceptedTxs
 		Transaction[] acceptedTxs = new Transaction[acceptedTransactions.size()];
 
-		// Copy valueas from ArrayList to Transaction[] array which is to be returned
+		// Copy values from ArrayList to Transaction[] array which is to be returned
 		for (int i = 0; i < acceptedTransactions.size(); i++) {
 			acceptedTxs[i] = acceptedTransactions.get(i);
 		}
