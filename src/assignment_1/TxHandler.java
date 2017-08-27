@@ -1,5 +1,6 @@
 package assignment_1;
 
+import java.security.PublicKey;
 import java.util.ArrayList;
 
 public class TxHandler {
@@ -23,6 +24,7 @@ public class TxHandler {
 	public boolean isValidTx(Transaction tx) {
 		int totalInputValue = 0;
 		int totalOutputValue = 0;
+		int indexOfInputUnderReview = 0;
 		boolean isUTXOinUTXOPool;
 		ArrayList<UTXO> allUTXOs = utxoPool.getAllUTXO(); 									// Get all the UTXOs from current utxoPool
 		ArrayList<UTXO> claimedUTXOs = new ArrayList<>();									// List with all UTXO's that have been validated
@@ -52,7 +54,9 @@ public class TxHandler {
 				boolean isOutputIndexSame = utxoUnderReview.getIndex() == underReviewInput.outputIndex;
 
 				if (isOutputIndexSame) {
+
 					// At this point we found the UTXO that was referenced by the underReviewInput
+					// If any of the further validations fails in this block, the isValidTx will return false
 
 					// Set the boolean to true so that execution can continue outside the UTXO for-each block
 					isUTXOinUTXOPool = true;
@@ -60,6 +64,7 @@ public class TxHandler {
 					// set the currentUTXO to reference the found UTXO object
 					currentUTXO = utxoUnderReview;
 
+					// METHOD FAILING VALIDATION
 					// check that (3) no UTXO is claimed multiple times by {@code tx}
 					for (UTXO claimedUTXO : claimedUTXOs) {
 
@@ -68,10 +73,18 @@ public class TxHandler {
 							return false;
 					}
 
-					// This can be reached only if UTXO was not found in the lsit of claimedUTXOs, so we add it to the list
-					claimedUTXOs.add(currentUTXO);
+					// METHOD FAILING VALIDATION
+					// (2) the signatures on each input of {@code tx} are valid
+					byte[] signature = underReviewInput.signature;
+					// TODO verify if this is the correct call. Maybe the rawData should be referencing the originating Tx?
+					byte[] message = tx.getRawDataToSign(indexOfInputUnderReview);
+					PublicKey pubKey = utxoPool.getTxOutput(utxoUnderReview).address;
+					if (!Crypto.verifySignature(pubKey, message, signature)) {
+						return false;
+					}
 
-					// (2) the signatures on each input of {@code tx} are valid,
+					// This can be reached only if UTXO was not found in the list of claimedUTXOs, it's signature is validated so we add it to the list
+					claimedUTXOs.add(currentUTXO);
 
 					// Add the value of UTXO's Output to the total value of inputs. This can be done only if everything else is fine with the input
 					totalInputValue += utxoPool.getTxOutput(currentUTXO).value;
@@ -85,9 +98,18 @@ public class TxHandler {
 			}
 
 			// This can be reached only if UTXO is in the UTXOPool and signature is valid
-			isUTXOinUTXOPool = false;														// Set the verification boolean to false
-			// continue with the review of next input
-		} // end underReviewInput cycle
+
+			// Get ready to continue with the review of next Transaction.Input
+
+			// Set the verification boolean to false
+			isUTXOinUTXOPool = false;
+
+			// increment the index of input under review
+			indexOfInputUnderReview++;
+
+		} // end of underReviewInput for-each cycle
+
+		// If this point is reached, then all inputs are verified
 
 		// (4) all of {@code tx}s output values are non-negative,
 		for (Transaction.Output output : tx.getOutputs()) {
