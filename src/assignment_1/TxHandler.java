@@ -28,7 +28,7 @@ public class TxHandler {
 		int totalOutputValue = 0;
 		int indexOfInputUnderReview = 0;
 		boolean isUTXOinUTXOPool;
-		UTXO currentUTXO;																	// The UTXO that is claimed by a Transaction.Input
+		UTXO currentUTXO;														// The UTXO that is claimed by a Transaction.Input
 		ArrayList<UTXO> allUTXOs = utxoPool.getAllUTXO(); 						// Get all the UTXOs from current utxoPool
 
 		// the claimedUTXO list needs to be reinstantiated with every call of isValidTX method. This list will be used in handleTX method
@@ -46,8 +46,6 @@ public class TxHandler {
 			for (UTXO utxoUnderReview : allUTXOs) {
 
 				// Check if the UTXO under review references the same transaction hash as the Transaction.Input under review
-				// TODO verify if this is valid, or equals() need to be used
-				
 				byte[] utxoHash=utxoUnderReview.getTxHash();
 				byte[] inputReferencedHash=underReviewInput.prevTxHash;
 				boolean isHashSame=Arrays.equals(utxoHash, inputReferencedHash);
@@ -85,7 +83,6 @@ public class TxHandler {
 					// METHOD FAILING VALIDATION
 					// (2) the signatures on each input of {@code tx} are valid
 					byte[] signature = underReviewInput.signature;
-					// TODO verify if this is the correct call. Maybe the rawData should be referencing the originating Tx?
 					byte[] message = tx.getRawDataToSign(indexOfInputUnderReview);
 					PublicKey pubKey = utxoPool.getTxOutput(utxoUnderReview).address;
 					if (!Crypto.verifySignature(pubKey, message, signature)) {
@@ -97,13 +94,18 @@ public class TxHandler {
 
 					// Add the value of UTXO's Output to the total value of inputs. This can be done only if everything else is fine with the input
 					totalInputValue += utxoPool.getTxOutput(currentUTXO).value;
-					break;																	// Break from the UTXO for-each cycle
+					
+					// Break from the UTXO for-each cycle, because we found the corresponding UTXO
+					break;
 				} // end if
+
 			} // end UTXO for-each cycle
 
 			// This is reached when all UTXO's have been checked. If currentTxOutput was not found then isValidTX returns false
 			if (!isUTXOinUTXOPool) {
-				return false;																// If an output is NOT in the pool, tx is NOT valid
+				
+				// If an output is NOT in the pool, tx is NOT valid
+				return false;																
 			}
 
 			// This can be reached only if UTXO is in the UTXOPool and signature is valid
@@ -125,10 +127,13 @@ public class TxHandler {
 			if (output.value < 0) {
 				return false;
 			}
+
+			//Add the valid output value to the total output value
+			totalOutputValue+=output.value;
 		}
 
 		// (5) the sum of {@code tx}s input values is greater than or equal to the sum of its output values;
-		if (totalInputValue < totalOutputValue)
+		if (totalOutputValue > totalInputValue)
 			return false;
 
 		// Only get here if everything passed
