@@ -2,10 +2,13 @@ package assignment_1;
 
 import java.security.PublicKey;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class TxHandler {
 
-	UTXOPool utxoPool;
+	UTXOPool utxoPool;														// create a copy of current utxoPool that is to be updated
+	ArrayList<UTXO> allUTXOs = utxoPool.getAllUTXO(); 						// Get all the UTXOs from current utxoPool
+	ArrayList<UTXO> claimedUTXOs;										    // List with all UTXO's that have been validated
 
 	/**
 	 * Creates a public ledger whose current UTXOPool (collection of unspent transaction outputs) is {@code utxoPool}. This should make a copy of utxoPool by using the UTXOPool(UTXOPool uPool)
@@ -26,9 +29,10 @@ public class TxHandler {
 		int totalOutputValue = 0;
 		int indexOfInputUnderReview = 0;
 		boolean isUTXOinUTXOPool;
-		ArrayList<UTXO> allUTXOs = utxoPool.getAllUTXO(); 									// Get all the UTXOs from current utxoPool
-		ArrayList<UTXO> claimedUTXOs = new ArrayList<>();									// List with all UTXO's that have been validated
 		UTXO currentUTXO;																	// The UTXO that is claimed by a Transaction.Input
+
+		//the claimedUTXO list needs to be reinstantiated with every call of isValidTX method. This list will be used in handleTX method
+		claimedUTXOs=new ArrayList<>();	
 
 		// (1) all outputs claimed by {@code tx} are in the current UTXO pool
 
@@ -126,91 +130,34 @@ public class TxHandler {
 		return true;
 	}
 
-	/*
-	 * Return true if all Transaction.Output in {@code tx} is in the current UTXOPool
-	 * 
-	 */
-	public boolean isAllClaimedOutputsInUTXOPool(Transaction tx) {
-		int currentTxOutputIndex = 0;														// Keep track of index in argument tx
-		boolean isTXinUTXOPool = false;														// This must be set to True for each tx.Output
-		for (Transaction.Output output : tx.getOutputs()) {									// Walk through each Transaction.Outputs in argument tx
-			ArrayList<UTXO> allUTXO = utxoPool.getAllUTXO(); 								// Get all the UTXOs from current utxoPool
-			for (UTXO utxo : allUTXO) {														// Check each UTXO
-				// is the txHash in UTXO same as the hash of tx that is to be verified?
-				// TODO verify if this is valid, or equals() need to be used
-				boolean isHashSame = utxo.getTxHash() == tx.getHash();						// Does UTXO hash refer tx's hash?
-				if (!isHashSame)
-					continue;																// If not, then UTXO is different continue with next UTXO for-each cylce
-				// is OutputIndex the same in UTXO and current output?
-				boolean isOutputIndexSame = utxo.getIndex() == currentTxOutputIndex;
-				if (isOutputIndexSame) {
-					isTXinUTXOPool = true;
-					break;																	// Break from the UTXO for-each cycle, as output is validated
-				} // end if
-			} // end UTXO for-each cycle
-
-			// This is reached when all UTXO's have been checked. If currentTxOutput was not found then isValidTX returns false
-			if (!isTXinUTXOPool) {
-				return false;																// If an output is NOT in the pool, tx is NOT valid
-			}
-
-			// Get ready for the next transaction.output verification cycle
-			isTXinUTXOPool = false;															// Set the verification boolean to false
-			currentTxOutputIndex++;															// Increment currentTXOutputIndex
-		} // end output for
-
-		// This can be reached only if all outputs tested positive
-		return true;
-	}
-
-	/*
-	 * Return true if the signatures on each input of {@code tx} are valid
-	 */
-	public boolean isAllSignaturesOnEachInputValid(Transaction tx) {
-		int inputIndex = 0;
-		for (Transaction.Input input : tx.getInputs()) {						// Walk through all inputs in argument tx
-
-			if (!Crypto.verifySignature(tx.getOutput(inputIndex).address, tx.getRawDataToSign(inputIndex),
-					input.signature)) {
-				return false;
-			}
-			inputIndex++;
-		}
-
-		// This can be reached only if all signatures are valid
-		return true;
-	}
-
-	public int sumOfInputValues(Transaction tx){
-		int sum=0;
-		int currentInputValue=0;
-		for (Transaction.Input input : tx.getInputs()){
-			input.outputIndex;
-		}
-		
-		
-		
-		
-		return sum;
-	}
-
 	/**
 	 * Handles each epoch by receiving an unordered array of proposed transactions, checking each transaction for correctness, returning a mutually valid array of accepted transactions, and updating
 	 * the current UTXO pool as appropriate.
 	 */
 	public Transaction[] handleTxs(Transaction[] possibleTxs) {
-		// IMPLEMENT THIS
-		Transaction[] acceptedTxs;
-		int numAcceptedTxs = 0;
-		for (Transaction transaction : possibleTxs) {
-			// if valid - add to the result array
+		ArrayList<Transaction> acceptedTransactions = new ArrayList<>();
 
-			// if valid - update the utxo
+		for (Transaction transactionUnderReview : possibleTxs) {
 
-			// if valid - increment numAcceptedTxs
-		}
+			// if valid - add to the result arrayList
+			if (isValidTx(transactionUnderReview)) {
+				acceptedTransactions.add(transactionUnderReview);
+
+				// if TX was valid, then update the UTXOPool by removing all claimedUTXOs
+				for (UTXO utxoToRemove:claimedUTXOs){
+					utxoPool.removeUTXO(utxoToRemove);
+				} //end UTXO removal from pool
+			}// end isValid(tx)
+		} //end transactionUnderReview for-each cycle
+
 		// Initialize acceptedTxs array with numAcceptedTxs
-		acceptedTxs = new Transaction[numAcceptedTxs];
+		Transaction[] acceptedTxs = new Transaction[acceptedTransactions.size()];
+
+		// Copy valueas from ArrayList to Transaction[] array which is to be returned
+		for (int i = 0; i < acceptedTransactions.size(); i++) {
+			acceptedTxs[i] = acceptedTransactions.get(i);
+		}
+
 		return acceptedTxs;
 	}
 
